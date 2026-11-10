@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node Server.js",
     "dev": "nodemon Server.js",
-    "close-day": "node setup/closeOpenDay.js"
+    "close-day": "node setup/closeOpenDay.js",
+    "reset-db": "node setup/resetToSuperadmin.js"
   },
   "keywords": [],
   "author": "",

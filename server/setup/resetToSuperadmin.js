@@ -1,30 +1,18 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
-import User from "../models/User.js";
 import Business from "../models/Business.js";
 import Beer from "../models/Beer.js";
 import DailyRecord from "../models/DailyRecord.js";
 import InventoryMovement from "../models/InventoryMovement.js";
+import CrateLoan from "../models/CrateLoan.js";
+import EmptyCrate from "../models/EmptyCrate.js";
 
 dotenv.config();
-
-const TARGET_EMAIL = process.env.SUPERADMIN_EMAIL ?? "ivobryan12@gmail.com";
-const TARGET_PASSWORD = process.env.SUPERADMIN_PASSWORD;
-const TARGET_USERNAME = "superadmin";
 
 const resetDatabase = async () => {
   try {
     if (!process.env.MONGO_URI) {
       console.error("MONGO_URI is not set in .env");
-      process.exit(1);
-    }
-
-    if (!TARGET_PASSWORD) {
-      console.error("SUPERADMIN_PASSWORD is not set in .env");
-      console.error(
-        "Set it first so the reset account can be logged into afterwards.",
-      );
       process.exit(1);
     }
 
@@ -41,15 +29,16 @@ const resetDatabase = async () => {
       console.log(" Beers:", await Beer.countDocuments());
       console.log(" DailyRecords:", await DailyRecord.countDocuments());
       console.log(" InventoryMovements:", await InventoryMovement.countDocuments());
-      console.log(" Users:", await User.countDocuments());
-      console.log(" Users (superadmin):", await User.countDocuments({ role: "superadmin" }));
+      console.log(" CrateLoans:", await CrateLoan.countDocuments());
+      console.log(" EmptyCrates:", await EmptyCrate.countDocuments());
       console.log("\nTo actually wipe data, run:");
-      console.log("  node setup/resetToSuperadmin.js --force");
+      console.log("  npm run reset-db -- --force");
       console.log("\nThis will:");
-      console.log(" - Delete ALL Businesses, Beers, DailyRecords, InventoryMovements");
-      console.log(" - Delete ALL Users except superadmin will be recreated");
-      console.log(` - Create/update superadmin -> ${TARGET_EMAIL}`);
-      console.log(`   (password comes from SUPERADMIN_PASSWORD in .env)`);
+      console.log(
+        " - Delete ALL Businesses, Beers, DailyRecords, InventoryMovements,",
+      );
+      console.log("   CrateLoans, and EmptyCrates");
+      console.log(" - Preserve ALL Users, including their email and password hashes");
       await mongoose.disconnect();
       process.exit(0);
     }
@@ -68,33 +57,15 @@ const resetDatabase = async () => {
     const delInv = await InventoryMovement.deleteMany({});
     console.log(`Deleted ${delInv.deletedCount} inventory movements`);
 
-    const delUsers = await User.deleteMany({});
-    console.log(`Deleted ${delUsers.deletedCount} users (all)`);
+    const delLoans = await CrateLoan.deleteMany({});
+    console.log(`Deleted ${delLoans.deletedCount} crate loans`);
 
-    // Create superadmin with target credentials
-    const passwordHash = await bcrypt.hash(TARGET_PASSWORD, 12);
-
-    const superadmin = await User.create({
-      email: TARGET_EMAIL.toLowerCase(),
-      username: TARGET_USERNAME,
-      passwordHash,
-      role: "superadmin",
-      active: true,
-    });
-
-    console.log("\nSuperadmin created:");
-    console.log({
-      id: superadmin._id,
-      email: superadmin.email,
-      username: superadmin.username,
-      role: superadmin.role,
-      active: superadmin.active,
-    });
+    const delEmptyCrates = await EmptyCrate.deleteMany({});
+    console.log(`Deleted ${delEmptyCrates.deletedCount} empty crate records`);
 
     console.log("\n--- WIPE COMPLETE ---");
-    console.log("Database now contains only superadmin");
-    console.log(`Login with: ${TARGET_EMAIL}`);
-    console.log(`Password is SUPERADMIN_PASSWORD from .env (see CREDENTIALS.txt)`);
+    console.log("All non-user data was deleted.");
+    console.log("All user records and credentials were preserved.");
 
     await mongoose.disconnect();
     process.exit(0);
